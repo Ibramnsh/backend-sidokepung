@@ -1,11 +1,12 @@
-import express from "express";
-import cors from "cors";
-import connectDB from "../src/config/db";
+import express from "express"
+import cors from "cors"
+import connectDB from "../src/config/db"
+import mongoose from "mongoose" // Import mongoose
 
-const app = express();
+const app = express()
 
 // Connect to Database
-connectDB();
+connectDB()
 
 // Middleware
 app.use(
@@ -15,11 +16,11 @@ app.use(
         ? ["https://yourdomain.com"] // Ganti dengan domain frontend Anda
         : ["http://localhost:3000", "http://localhost:5173"], // untuk development
     credentials: true,
-  })
-);
+  }),
+)
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "10mb" }))
+app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -39,37 +40,67 @@ app.get("/", (req, res) => {
       "PUT /api/pekerjaan/:id",
       "DELETE /api/pekerjaan/:id",
     ],
-  });
-});
+  })
+})
+
+// Tambahkan setelah health check endpoint
+app.get("/debug", async (req, res) => {
+  try {
+    await connectDB()
+
+    const dbStatus = mongoose.connection.readyState
+    const statusMap = {
+      0: "disconnected",
+      1: "connected",
+      2: "connecting",
+      3: "disconnecting",
+    }
+
+    // Test collections
+    const collections = await mongoose.connection.db.listCollections().toArray()
+
+    res.json({
+      message: "Debug information",
+      database: {
+        status: statusMap[dbStatus],
+        host: mongoose.connection.host,
+        name: mongoose.connection.name,
+        collections: collections.map((c) => c.name),
+      },
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        MONGO_URI_EXISTS: !!process.env.MONGO_URI,
+        MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
+        JWT_SECRET_EXISTS: !!process.env.JWT_SECRET,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({
+      error: "Debug failed",
+      details: error.message,
+      type: error.name,
+    })
+  }
+})
 
 // Import routes
-import petaRoutes from "../src/routes/petaRoutes";
-import pekerjaanRoutes from "../src/routes/pekerjaanRoutes";
-import authRoutes from "../src/routes/authRoutes";
+import petaRoutes from "../src/routes/petaRoutes"
+import pekerjaanRoutes from "../src/routes/pekerjaanRoutes"
+import authRoutes from "../src/routes/authRoutes"
 
 // API Routes
-app.use("/api/peta", petaRoutes);
-app.use("/api/pekerjaan", pekerjaanRoutes);
-app.use("/api/auth", authRoutes);
+app.use("/api/peta", petaRoutes)
+app.use("/api/pekerjaan", pekerjaanRoutes)
+app.use("/api/auth", authRoutes)
 
 // Error handling middleware
-app.use(
-  (
-    err: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error("Error:", err);
-    res.status(500).json({
-      error: "Internal Server Error",
-      message:
-        process.env.NODE_ENV === "development"
-          ? err.message
-          : "Something went wrong",
-    });
-  }
-);
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Error:", err)
+  res.status(500).json({
+    error: "Internal Server Error",
+    message: process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+  })
+})
 
 // 404 handler
 app.use("*", (req, res) => {
@@ -87,7 +118,7 @@ app.use("*", (req, res) => {
       "PUT /api/pekerjaan/:id",
       "DELETE /api/pekerjaan/:id",
     ],
-  });
-});
+  })
+})
 
-export default app;
+export default app
