@@ -1,16 +1,27 @@
 import type { Request, Response } from "express"
 import mongoose from "mongoose"
 import Pekerjaan from "../models/PekerjaanModel"
-import { connectDB } from "../config/db"
+import connectDB from "../config/db"
 
 // READ
 export const getPekerjaanData = async (req: Request, res: Response) => {
   try {
     console.log("🔄 Starting getPekerjaanData...")
 
-    // Test database connection first
+    // Ensure database connection
     await connectDB()
-    console.log("✅ Database connection successful")
+
+    // Wait a bit for connection to stabilize
+    if (mongoose.connection.readyState !== 1) {
+      console.log("⏳ Waiting for database connection...")
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error("Database not connected after waiting")
+    }
+
+    console.log("✅ Database connection confirmed")
 
     const { rt, rw } = req.query
     const query: any = { "Jenis Kelamin": { $exists: true } }
@@ -23,22 +34,24 @@ export const getPekerjaanData = async (req: Request, res: Response) => {
 
     console.log("📋 Query:", JSON.stringify(query))
 
-    // Check if collection exists
-    const collections = await mongoose.connection.db.listCollections().toArray()
-    console.log(
-      "📚 Available collections:",
-      collections.map((c) => c.name),
-    )
+    // Try to get data with timeout
+    const dataFromDb = (await Promise.race([
+      Pekerjaan.find(query).lean().exec(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Query timeout")), 8000)),
+    ])) as any[]
 
-    const dataFromDb = await Pekerjaan.find(query).lean()
     console.log(`📊 Found ${dataFromDb.length} records`)
 
     if (dataFromDb.length === 0) {
-      console.log("⚠️ No data found in database")
+      // Try to get any data to check if collection exists
+      const anyData = await Pekerjaan.findOne().lean().exec()
+      console.log("🔍 Any data exists:", !!anyData)
+
       return res.json({
-        message: "No data found",
+        message: "No data found with current query",
         query: query,
-        availableCollections: collections.map((c) => c.name),
+        hasAnyData: !!anyData,
+        totalCount: await Pekerjaan.countDocuments(),
       })
     }
 
@@ -56,13 +69,14 @@ export const getPekerjaanData = async (req: Request, res: Response) => {
     res.json(transformedData)
   } catch (error) {
     console.error("❌ Error in getPekerjaanData:", error)
-    console.error("Error stack:", error.stack)
 
     res.status(500).json({
       error: "Failed to fetch data from MongoDB",
       details: error.message,
       type: error.name,
-      code: error.code || "UNKNOWN",
+      mongooseState: mongoose.connection.readyState,
+      dbHost: mongoose.connection.host,
+      dbName: mongoose.connection.name,
     })
   }
 }
@@ -70,10 +84,12 @@ export const getPekerjaanData = async (req: Request, res: Response) => {
 // CREATE
 export const createPekerjaanData = async (req: Request, res: Response) => {
   try {
+    await connectDB()
+
     const { rt, rw, umur, jenis_kelamin, status_pekerjaan_utama, nama_anggota } = req.body
 
     if (!rt || !rw || !umur || !jenis_kelamin || !status_pekerjaan_utama || !nama_anggota) {
-      return res.status(400).json({ message: "All fields including dusun must be filled." })
+      return res.status(400).json({ message: "All fields must be filled." })
     }
 
     const newData = new Pekerjaan({
@@ -93,13 +109,18 @@ export const createPekerjaanData = async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error("Failed to add data:", error)
-    res.status(500).json({ message: "Failed to add data to the database." })
+    res.status(500).json({
+      message: "Failed to add data to the database.",
+      error: error.message,
+    })
   }
 }
 
 // UPDATE
 export const updatePekerjaanData = async (req: Request, res: Response) => {
   try {
+    await connectDB()
+
     const { id } = req.params
     const { rt, rw, umur, jenis_kelamin, status_pekerjaan_utama, nama_anggota } = req.body
 
@@ -134,6 +155,8 @@ export const updatePekerjaanData = async (req: Request, res: Response) => {
 // DELETE
 export const deletePekerjaanData = async (req: Request, res: Response) => {
   try {
+    await connectDB()
+
     const { id } = req.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
