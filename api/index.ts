@@ -8,10 +8,14 @@ const app = express()
 // Middleware
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? ["https://yourdomain.com"] // Ganti dengan domain frontend Anda
-        : ["http://localhost:3000", "http://localhost:5173"], // untuk development
+    origin: [
+      //   "https://desa-cantik-sda.vercel.app",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      //   "https://desacantik.pahlawan140.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"], // Metode yang diizinkan
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 )
