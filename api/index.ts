@@ -20,27 +20,6 @@ app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 
 // Health check endpoint
-app.get("/", (req, res) => {
-  res.json({
-    message: "Backend Sidokepung API is running!",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    mongooseState: mongoose.connection.readyState,
-    availableRoutes: [
-      "GET /",
-      "GET /debug",
-      "GET /api/auth/test",
-      "POST /api/auth/login",
-      "POST /api/auth/create-admin",
-      "GET /api/auth/create-admin-form",
-      "GET /api/peta",
-      "GET /api/pekerjaan",
-      "POST /api/pekerjaan",
-      "PUT /api/pekerjaan/:id",
-      "DELETE /api/pekerjaan/:id",
-    ],
-  })
-})
 
 // Debug endpoint yang lebih aman
 app.get("/debug", async (req, res) => {
