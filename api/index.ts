@@ -27,9 +27,6 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 app.get("/", (req, res) => {
   res.json({
     message: "Backend Sidokepung API is running!",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    mongooseState: mongoose.connection.readyState,
   })
 })
 
