@@ -12,7 +12,7 @@ app.use(
       //   "https://desa-cantik-sda.vercel.app",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-      //   "https://desacantik.pahlawan140.com",
+      "https://desacantik.pahlawan140.com",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"], // Metode yang diizinkan
     allowedHeaders: ["Content-Type", "Authorization"],
